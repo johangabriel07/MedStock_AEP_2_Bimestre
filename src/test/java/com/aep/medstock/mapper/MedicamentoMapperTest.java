@@ -41,7 +41,7 @@ class MedicamentoMapperTest {
     }
 
     @Test
-    void deveAtualizarModel() {
+    void deveAtualizarModelSemAlterarEstoqueELotes() {
 
         Medicamento medicamento = new Medicamento();
         medicamento.setId("1");
@@ -61,14 +61,15 @@ class MedicamentoMapperTest {
         mapper.updateModel(medicamento, request);
 
         assertEquals("Paracetamol 500mg", medicamento.getNome());
-        assertEquals(200, medicamento.getQuantidade());
+        assertEquals(100, medicamento.getQuantidade());
         assertEquals(30, medicamento.getQuantidadeMinima());
+
         assertEquals(
-                LocalDate.of(2028, 12, 31),
+                LocalDate.of(2027, 12, 31),
                 medicamento.getValidade()
         );
-        assertEquals("LOT-002", medicamento.getLote());
 
+        assertEquals("LOT-001", medicamento.getLote());
         assertEquals("1", medicamento.getId());
     }
 
