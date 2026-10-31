@@ -391,4 +391,50 @@ class MedicamentoServiceTest {
         verify(repository).findById("999");
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void deveListarTodosMedicamentos() {
+        Medicamento medicamento = new Medicamento();
+        medicamento.setId("1");
+        medicamento.setNome("Paracetamol");
+
+        when(repository.findAll()).thenReturn(List.of(medicamento));
+        when(mapper.toSummaryResponse(medicamento)).thenReturn(null);
+
+        List<MedicamentoSummary> resultado = service.listarTodos();
+
+        assertEquals(1, resultado.size());
+
+        verify(repository).findAll();
+        verify(mapper).toSummaryResponse(medicamento);
+    }
+
+    @Test
+    void deveRejeitarEntradaComValidadeDiferenteNoMesmoLote() {
+        Medicamento medicamento = new Medicamento();
+        medicamento.setId("1");
+        medicamento.setQuantidade(100);
+
+        LoteEstoque lote = new LoteEstoque();
+        lote.setNumero("LOT-001");
+        lote.setQuantidade(100);
+        lote.setValidade(LocalDate.of(2027, 12, 31));
+
+        medicamento.setLotes(List.of(lote));
+
+        EntradaEstoque request = new EntradaEstoque();
+        request.setQuantidade(10);
+        request.setLote("LOT-001");
+        request.setValidade(LocalDate.of(2028, 12, 31));
+
+        when(repository.findById("1")).thenReturn(Optional.of(medicamento));
+
+        assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> service.registrarEntrada("1", request)
+        );
+
+        verify(repository, never()).save(any());
+        verify(movimentacaoRepository, never()).save(any());
+    }
 }
