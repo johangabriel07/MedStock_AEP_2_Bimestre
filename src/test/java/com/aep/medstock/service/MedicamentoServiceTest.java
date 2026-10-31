@@ -1,4 +1,3 @@
-
 package com.aep.medstock.service;
 
 import com.aep.medstock.dto.*;
@@ -304,5 +303,67 @@ class MedicamentoServiceTest {
 
         verify(repository).findByValidadeLessThanEqual(any(LocalDate.class));
         verify(mapper).toSummaryResponse(medicamento);
+    }
+
+    @Test
+    void deveLancarExcecaoAoRegistrarEntradaDeMedicamentoInexistente() {
+        EntradaEstoque request = new EntradaEstoque();
+        request.setQuantidade(10);
+
+        when(repository.findById("999")).thenReturn(Optional.empty());
+
+        assertThrows(
+                MedicamentoException.class,
+                () -> service.registrarEntrada("999", request)
+        );
+
+        verify(repository).findById("999");
+        verify(repository, never()).save(any());
+        verify(movimentacaoRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoAoRegistrarSaidaDeMedicamentoInexistente() {
+        SaidaEstoque request = new SaidaEstoque();
+        request.setQuantidade(5);
+
+        when(repository.findById("999")).thenReturn(Optional.empty());
+
+        assertThrows(
+                MedicamentoException.class,
+                () -> service.registrarSaida("999", request)
+        );
+
+        verify(repository).findById("999");
+        verify(repository, never()).save(any());
+        verify(movimentacaoRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoAoDeletarMedicamentoInexistente() {
+        when(repository.findById("999")).thenReturn(Optional.empty());
+
+        assertThrows(
+                MedicamentoException.class,
+                () -> service.deletar("999")
+        );
+
+        verify(repository).findById("999");
+        verify(repository, never()).deleteById(any());
+    }
+
+    @Test
+    void deveLancarExcecaoAoAtualizarMedicamentoInexistente() {
+        MedicamentoUpdate request = new MedicamentoUpdate();
+
+        when(repository.findById("999")).thenReturn(Optional.empty());
+
+        assertThrows(
+                MedicamentoException.class,
+                () -> service.atualizar("999", request)
+        );
+
+        verify(repository).findById("999");
+        verify(repository, never()).save(any());
     }
 }
