@@ -58,12 +58,18 @@ public class MedicamentoService {
 
         garantirLotes(medicamento);
 
-        String numeroLotePrincipal = medicamento.getLote();
         LoteEstoque loteEncontrado = null;
 
         for (LoteEstoque loteAtual : medicamento.getLotes()) {
-            if (loteAtual.getNumero() != null
-                    && loteAtual.getNumero().equals(numeroLotePrincipal)) {
+            if (request.getLote().equals(loteAtual.getNumero())) {
+
+                if (!request.getValidade().equals(loteAtual.getValidade())) {
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.BAD_REQUEST,
+                            "O lote informado já existe com uma validade diferente"
+                    );
+                }
+
                 loteEncontrado = loteAtual;
                 break;
             }
@@ -71,9 +77,10 @@ public class MedicamentoService {
 
         if (loteEncontrado == null) {
             loteEncontrado = new LoteEstoque();
-            loteEncontrado.setNumero(numeroLotePrincipal);
+            loteEncontrado.setNumero(request.getLote());
             loteEncontrado.setQuantidade(0);
-            loteEncontrado.setValidade(medicamento.getValidade());
+            loteEncontrado.setValidade(request.getValidade());
+
             medicamento.getLotes().add(loteEncontrado);
         }
 
@@ -82,6 +89,7 @@ public class MedicamentoService {
         );
 
         medicamento.setQuantidade(calcularQuantidadeTotal(medicamento));
+
         medicamento = repository.save(medicamento);
 
         registrarMovimentacao(medicamento, "ENTRADA", request.getQuantidade());
@@ -102,11 +110,18 @@ public class MedicamentoService {
 
         List<LoteEstoque> lotesOrdenados = medicamento.getLotes()
                 .stream()
-                .sorted(Comparator.comparing(
-                        LoteEstoque::getValidade,
-                        Comparator.nullsLast(Comparator.naturalOrder())
-                ))
+                .filter(lote -> lote.getValidade() != null
+                        && !lote.getValidade().isBefore(LocalDate.now()))
+                .sorted(Comparator.comparing(LoteEstoque::getValidade))
                 .toList();
+
+        int quantidadeDisponivelTotal = lotesOrdenados.stream()
+                .mapToInt(LoteEstoque::getQuantidade)
+                .sum();
+
+        if (request.getQuantidade() > quantidadeDisponivelTotal) {
+            throw new EstoqueException();
+        }
 
         for (LoteEstoque lote : lotesOrdenados) {
             if (quantidadeRestante == 0) {

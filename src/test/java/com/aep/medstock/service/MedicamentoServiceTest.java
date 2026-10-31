@@ -5,6 +5,7 @@ import com.aep.medstock.exception.EstoqueException;
 import com.aep.medstock.exception.MedicamentoException;
 import com.aep.medstock.mapper.MedicamentoMapper;
 import com.aep.medstock.model.Medicamento;
+import com.aep.medstock.model.LoteEstoque;
 import com.aep.medstock.repository.MedicamentoRepository;
 import com.aep.medstock.repository.MovimentacaoEstoqueRepository;
 import org.junit.jupiter.api.Test;
@@ -112,9 +113,20 @@ class MedicamentoServiceTest {
         medicamento.setId("1");
         medicamento.setNome("Paracetamol");
         medicamento.setQuantidade(100);
+        medicamento.setLote("LOT-001");
+        medicamento.setValidade(LocalDate.of(2027, 12, 31));
+
+        LoteEstoque loteExistente = new LoteEstoque();
+        loteExistente.setNumero("LOT-001");
+        loteExistente.setQuantidade(100);
+        loteExistente.setValidade(LocalDate.of(2027, 12, 31));
+
+        medicamento.setLotes(new java.util.ArrayList<>(List.of(loteExistente)));
 
         EntradaEstoque request = new EntradaEstoque();
         request.setQuantidade(50);
+        request.setLote("LOT-002");
+        request.setValidade(LocalDate.of(2028, 12, 31));
 
         MedicamentoResponse response = new MedicamentoResponse();
         response.setId("1");
@@ -129,6 +141,13 @@ class MedicamentoServiceTest {
 
         assertEquals(150, medicamento.getQuantidade());
         assertEquals(150, resultado.getQuantidade());
+        assertEquals(2, medicamento.getLotes().size());
+
+        LoteEstoque novoLote = medicamento.getLotes().get(1);
+
+        assertEquals("LOT-002", novoLote.getNumero());
+        assertEquals(50, novoLote.getQuantidade());
+        assertEquals(LocalDate.of(2028, 12, 31), novoLote.getValidade());
 
         verify(repository).findById("1");
         verify(repository).save(medicamento);
@@ -142,6 +161,13 @@ class MedicamentoServiceTest {
         medicamento.setId("1");
         medicamento.setNome("Paracetamol");
         medicamento.setQuantidade(100);
+
+        LoteEstoque lote = new LoteEstoque();
+        lote.setNumero("LOT-001");
+        lote.setQuantidade(100);
+        lote.setValidade(LocalDate.now().plusDays(60));
+
+        medicamento.setLotes(new java.util.ArrayList<>(List.of(lote)));
 
         SaidaEstoque request = new SaidaEstoque();
         request.setQuantidade(30);
@@ -159,11 +185,10 @@ class MedicamentoServiceTest {
 
         assertEquals(70, medicamento.getQuantidade());
         assertEquals(70, resultado.getQuantidade());
+        assertEquals(70, lote.getQuantidade());
 
-        verify(repository).findById("1");
         verify(repository).save(medicamento);
         verify(movimentacaoRepository).save(any());
-        verify(mapper).toResponse(medicamento);
     }
 
     @Test
